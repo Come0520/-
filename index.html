@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NexusFlow | 单据生命周期草稿本</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;500;700&family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Noto Serif SC"', 'serif'],
+              display: ['"Ma Shan Zheng"', 'cursive'],
+              hand: ['"Zhi Mang Xing"', 'cursive'],
+            },
+            colors: {
+              paper: {
+                DEFAULT: '#fdfbf7',
+                dark: '#f0ece2',
+                grid: '#e5e7eb',
+              },
+              pencil: {
+                light: '#9ca3af',
+                DEFAULT: '#374151', // Graphite
+                dark: '#111827',
+              },
+              ink: {
+                blue: '#2563eb', // Pen blue
+                red: '#dc2626', // Grading red
+              }
+            },
+            animation: {
+              'scribble': 'scribble 0.5s ease-in-out infinite alternate',
+              'draw': 'draw 1s ease-out forwards',
+            },
+            keyframes: {
+              'scribble': {
+                '0%': { transform: 'rotate(-1deg)' },
+                '100%': { transform: 'rotate(1deg)' },
+              },
+              'draw': {
+                '0%': { strokeDasharray: '0, 1000' },
+                '100%': { strokeDasharray: '1000, 0' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #fdfbf7;
+        color: #374151;
+        background-image: 
+          linear-gradient(#e5e7eb 1px, transparent 1px),
+          linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+        background-size: 20px 20px;
+        font-family: "Noto Serif SC", serif;
+      }
+      
+      /* 手绘边框效果 */
+      .sketch-box {
+        background: #fff;
+        border: 2px solid #374151;
+        border-radius: 2px 255px 3px 25px / 255px 5px 225px 3px;
+        box-shadow: 2px 3px 0px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+      }
+      
+      .sketch-box:hover {
+        box-shadow: 4px 5px 0px rgba(0,0,0,0.2);
+        transform: translateY(-1px);
+      }
+
+      .sketch-btn {
+        border: 2px solid #374151;
+        background: transparent;
+        font-family: "Ma Shan Zheng", cursive;
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .sketch-btn:disabled {
+        border-color: #9ca3af;
+        color: #9ca3af;
+        border-style: dashed;
+        cursor: not-allowed;
+      }
+
+      /* 滚动条样式 */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #9ca3af;
+        border-radius: 20px;
+        border: 2px solid transparent;
+        background-clip: content-box;
+      }
+      
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

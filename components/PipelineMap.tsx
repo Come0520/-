@@ -41,100 +41,88 @@ export const PipelineMap: React.FC<Props> = ({ state }) => {
     }
   };
 
-  const Node = ({ id, label, x, y, type = 'main' }: any) => {
+  const IconNode = ({ id, label, x, y, type = 'main' }: any) => {
     const status = getNodeStatus(id);
+    const isSub = type === 'sub';
     
-    // 素描风格：黑色描边，白色或灰色填充
-    let strokeClass = "stroke-gray-300";
-    let fillClass = "fill-transparent";
-    let textClass = "fill-gray-400";
-    let lineDash = "5,5"; // 默认为虚线（未激活）
-    let strokeWidth = "2";
+    // XP Icon Colors
+    let baseColor = "#8FA8CF"; // Inactive Grey/Blue
+    let iconContent: React.ReactNode = null;
+    
+    if (status === 'active') baseColor = "#245DDA"; // XP Blue
+    if (status === 'completed') baseColor = "#3C8B18"; // XP Green
+    if (status === 'error') baseColor = "#E62C2C"; // XP Red
 
-    if (status === 'active') {
-      strokeClass = "stroke-pencil-dark";
-      fillClass = "fill-white";
-      textClass = "fill-pencil-dark font-bold";
-      lineDash = "0"; // 实线
-      strokeWidth = "3";
-    } else if (status === 'completed') {
-      strokeClass = "stroke-pencil-dark";
-      fillClass = "fill-gray-200"; // 涂黑/涂灰表示完成
-      textClass = "fill-pencil-dark";
-      lineDash = "0";
-    } else if (status === 'error') {
-      strokeClass = "stroke-ink-red";
-      textClass = "fill-ink-red decoration-line-through";
+    // Simple pixel-art style SVG paths representing XP icons
+    switch(id) {
+        case 'lead': iconContent = <path d="M16 16 L16 32 M8 16 L24 16 M16 8 C20 8 24 12 24 16 C24 20 20 24 16 24 C12 24 8 20 8 16 C8 12 12 8 16 8" fill="white" />; break; // User
+        case 'quote': iconContent = <rect x="8" y="6" width="16" height="20" fill="white" />; break; // Document
+        case 'measure': iconContent = <path d="M6 26 L26 6 L28 8 L8 28 Z" fill="white" />; break; // Ruler
+        case 'sales': iconContent = <circle cx="16" cy="16" r="8" stroke="white" strokeWidth="2" fill="none" />; break; // Coin
+        case 'install': iconContent = <rect x="4" y="12" width="24" height="10" fill="white" />; break; // Box
+        case 'finance': iconContent = <rect x="6" y="8" width="20" height="16" rx="2" fill="white" />; break; // Calculator
     }
 
-    const isSub = type === 'sub';
-    const r = isSub ? 25 : 35;
-    const fontSize = isSub ? '12px' : '14px';
-
-    // 模拟手绘圆圈的不规则路径
-    // 简单的圆形太完美了，这里保留圆形但用粗糙的笔触颜色
     return (
-      <g transform={`translate(${x}, ${y})`} className="transition-all duration-500">
-        {/* 外圈（多重描边模拟素描） */}
-        <circle 
-          r={r} 
-          className={`${strokeClass} ${fillClass} transition-all duration-500`}
-          strokeWidth={strokeWidth}
-          strokeDasharray={lineDash}
-          style={{ vectorEffect: 'non-scaling-stroke' }} 
-        />
+      <g transform={`translate(${x - 20}, ${y - 20})`} className="cursor-pointer hover:opacity-90 transition-opacity">
+        {/* Shadow */}
+        <rect x="4" y="4" width="40" height="40" rx="8" fill="rgba(0,0,0,0.2)" />
         
-        {/* 如果激活，加一个稍微偏移的圈，模拟手画两圈 */}
-        {status === 'active' && (
-             <circle r={r} cx="2" cy="1" className="stroke-pencil-dark fill-transparent opacity-50" strokeWidth="1" />
-        )}
+        {/* Icon Background */}
+        <rect x="0" y="0" width="40" height="40" rx="6" fill={baseColor} stroke="white" strokeWidth="2" />
+        
+        {/* Icon Content */}
+        <g transform="translate(4,4)">{iconContent}</g>
 
-        <text 
-          y={isSub ? 45 : 60} 
-          textAnchor="middle" 
-          className={`font-hand tracking-widest ${fontSize} ${textClass}`}
-        >
+        {/* Gloss Effect (Top half) */}
+        <path d="M2 2 L38 2 L38 20 Q20 25 2 20 Z" fill="white" opacity="0.2" />
+
+        {/* Label */}
+        <text x="20" y="55" textAnchor="middle" className="font-sans text-[11px] font-bold fill-[#333]" style={{textShadow: '0px 1px 0px white'}}>
           {label}
         </text>
-
-        {/* 内部标记 */}
-        <text y="8" textAnchor="middle" className={`font-display text-lg ${status === 'completed' ? 'fill-pencil-dark' : 'fill-transparent'}`}>
-           {status === 'completed' ? '✔' : ''}
-        </text>
+        
+        {/* Status Indicator */}
         {status === 'active' && (
-           <text y="8" textAnchor="middle" className="fill-pencil-dark text-xs animate-pulse font-hand">...</text>
+            <circle cx="36" cy="4" r="6" fill="#E68B2C" stroke="white" strokeWidth="2">
+                <animate attributeName="opacity" values="1;0.5;1" dur="1s" repeatCount="indefinite" />
+            </circle>
         )}
       </g>
     );
   };
 
-  const Connection = ({ start, end, active }: any) => {
-    // 模拟手绘线条
-    const midX = (start[0] + end[0]) / 2;
-    const pathD = `M ${start[0]} ${start[1]} Q ${midX} ${start[1] + (Math.random() * 2 - 1)} ${end[0]} ${end[1]}`; // 稍微加点随机弯曲太复杂，直接直线即可
-    
+  const Connector = ({ start, end, active }: any) => {
     return (
-      <line 
-        x1={start[0]} y1={start[1]} 
-        x2={end[0]} y2={end[1]} 
-        className={`stroke-2 transition-all duration-700 ${active ? 'stroke-pencil-dark' : 'stroke-gray-300'}`}
-        strokeDasharray={active ? "0" : "5,5"}
-        strokeLinecap="round"
-      />
+      <g>
+         <path 
+            d={`M ${start[0]} ${start[1]} L ${end[0]} ${end[1]}`} 
+            stroke={active ? "#3C8B18" : "#ccc"} 
+            strokeWidth="4" 
+            fill="none" 
+         />
+         {/* Highlight line for pseudo-3D pipe effect */}
+         <path 
+            d={`M ${start[0]} ${start[1]} L ${end[0]} ${end[1]}`} 
+            stroke={active ? "#8CCF6F" : "#eee"} 
+            strokeWidth="2" 
+            fill="none" 
+         />
+      </g>
     );
   };
   
   // 坐标
   const coords: any = {
-    lead: [80, 100],
-    quote: [240, 100],
-    measure: [240, 220], 
-    sales: [450, 100],
-    install: [650, 100],
-    finance: [850, 100]
+    lead: [80, 80],
+    quote: [220, 80],
+    measure: [220, 200], 
+    sales: [400, 80],
+    install: [550, 80],
+    finance: [700, 80]
   };
 
-  // 路径状态逻辑
+  // 路径逻辑
   const leadToQuote = state.lead?.status === LeadStatus.CONVERTED;
   const quoteToMeasure = state.quote?.currentStatus === QuoteVersionStatus.PRELIMINARY || state.quote?.currentStatus === QuoteVersionStatus.MEASURING;
   const measureToQuote = state.measurement?.status === ServiceOrderStatus.COMPLETED;
@@ -144,57 +132,31 @@ export const PipelineMap: React.FC<Props> = ({ state }) => {
   const salesToFinance = state.salesOrder?.status === SalesOrderStatus.RECONCILIATION || state.salesOrder?.status === SalesOrderStatus.COMPLETED;
 
   return (
-    <div className="w-full h-full min-h-[350px] flex items-center justify-center overflow-x-auto bg-paper rounded-xl border-2 border-pencil-dark relative sketch-box">
+    <div className="w-full h-full min-h-[280px] flex items-center justify-center bg-white border-2 border-[#828790] shadow-inner p-4 relative overflow-auto">
+      <div className="absolute top-2 left-2 text-xs text-gray-400 font-sans">流程视图 (C:\My Documents\Workflows)</div>
       
-      <svg width="950" height="300" viewBox="0 0 950 300" className="z-10">
-        <defs>
-          <marker id="arrow-pencil" viewBox="0 0 10 10" refX="8" refY="5"
-            markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-            <path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" />
-          </marker>
-           <marker id="arrow-gray" viewBox="0 0 10 10" refX="8" refY="5"
-            markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-            <path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="#d1d5db" strokeWidth="2" strokeLinecap="round"/>
-          </marker>
-        </defs>
-
-        {/* 主水平线 */}
-        <Connection start={[115, 100]} end={[205, 100]} active={leadToQuote} />
-        <Connection start={[275, 100]} end={[415, 100]} active={quoteToSales} />
-        <Connection start={[485, 100]} end={[615, 100]} active={salesToInstall} />
-        <Connection start={[685, 100]} end={[815, 100]} active={salesToFinance} />
-
-        {/* 垂直测量逻辑 */}
-        <line x1={240} y1={135} x2={240} y2={195} 
-          className={`stroke-2 ${quoteToMeasure ? 'stroke-pencil-dark' : 'stroke-gray-300'}`} 
-          strokeDasharray={quoteToMeasure ? "0" : "5,5"}
-          markerEnd={quoteToMeasure ? "url(#arrow-pencil)" : "url(#arrow-gray)"} 
-        />
+      <svg width="800" height="260" viewBox="0 0 800 260">
         
-        {/* 回流线 (曲线) */}
+        {/* Horizontal */}
+        <Connector start={[100, 80]} end={[200, 80]} active={leadToQuote} />
+        <Connector start={[240, 80]} end={[380, 80]} active={quoteToSales} />
+        <Connector start={[420, 80]} end={[530, 80]} active={salesToInstall} />
+        <Connector start={[570, 80]} end={[680, 80]} active={salesToFinance} />
+
+        {/* Vertical Measure */}
+        <Connector start={[220, 100]} end={[220, 180]} active={quoteToMeasure} />
+        
+        {/* Return paths (Visualized as curved pipes) */}
         {measureToQuote && (
-          <path d="M 265 220 C 320 220, 320 140, 275 110" fill="none" 
-            className="stroke-2 stroke-ink-blue stroke-dasharray-4" 
-            markerEnd="url(#arrow-pencil)">
-          </path>
-        )}
-        
-        {/* 安装回流 */}
-        {installToSales && (
-          <path d="M 650 135 C 650 160, 500 160, 485 125" fill="none" 
-            className="stroke-2 stroke-ink-blue stroke-dasharray-4" 
-            markerEnd="url(#arrow-pencil)" />
+          <path d="M 240 200 C 300 200, 300 120, 240 100" fill="none" stroke="#3C8B18" strokeWidth="2" strokeDasharray="4 4" />
         )}
 
-        {/* 节点绘制 */}
-        <Node id="lead" label="线索录入" x={coords.lead[0]} y={coords.lead[1]} />
-        <Node id="quote" label="报价方案" x={coords.quote[0]} y={coords.quote[1]} />
-        <Node id="measure" label="上门测量" x={coords.measure[0]} y={coords.measure[1]} type="sub" />
-        <Node id="sales" label="销售订单" x={coords.sales[0]} y={coords.sales[1]} />
-        <Node id="install" label="上门安装" x={coords.install[0]} y={coords.install[1]} type="sub" />
-        <Node id="finance" label="财务对账" x={coords.finance[0]} y={coords.finance[1]} />
-
-        <text x="330" y="190" className="fill-ink-blue text-[10px] font-hand opacity-80 -rotate-6">状态同步</text>
+        <IconNode id="lead" label="我的线索" x={coords.lead[0]} y={coords.lead[1]} />
+        <IconNode id="quote" label="报价单据" x={coords.quote[0]} y={coords.quote[1]} />
+        <IconNode id="measure" label="测量工具" x={coords.measure[0]} y={coords.measure[1]} type="sub" />
+        <IconNode id="sales" label="销售订单" x={coords.sales[0]} y={coords.sales[1]} />
+        <IconNode id="install" label="安装服务" x={coords.install[0]} y={coords.install[1]} type="sub" />
+        <IconNode id="finance" label="财务结算" x={coords.finance[0]} y={coords.finance[1]} />
 
       </svg>
     </div>

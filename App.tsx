@@ -1,4 +1,4 @@
-import React, { useReducer, useState } from 'react';
+import React, { useReducer, useState, useEffect } from 'react';
 import { 
   SimulationState, 
   LeadStatus, 
@@ -12,7 +12,7 @@ import { INITIAL_LOGS, STATUS_COLORS } from './constants';
 import { SimulationController } from './components/SimulationController';
 import { PipelineMap } from './components/PipelineMap';
 import { DashboardView } from './views/DashboardView';
-import { LayoutDashboard, Activity, Terminal, GitMerge, FileText, CheckSquare, PenTool } from 'lucide-react';
+import { Maximize2, Minimize2, X, Monitor, ChevronRight, Layout } from 'lucide-react';
 
 // --- REDUCER ---
 
@@ -31,72 +31,65 @@ function log(state: SimulationState, actor: string, action: string, detail: stri
 }
 
 function simulationReducer(state: SimulationState, action: any): SimulationState {
+  // Business logic remains exactly the same, just keeping it robust
   switch (action.type) {
     case 'CREATE_LEAD':
       return {
         ...state,
-        lead: { id: 'LD-2024-001', customerName: '张三 (拟定)', status: LeadStatus.NEW, tags: [], history: [] },
-        logs: log(state, '销售顾问', '新建线索', '录入新客户张三，编号 LD-2024-001')
+        lead: { id: 'LD-001', customerName: '张三', status: LeadStatus.NEW, tags: [], history: [] },
+        logs: log(state, '系统', '新建', '新线索 LD-001 已录入')
       };
     case 'ASSIGN_LEAD':
       if (!state.lead) return state;
-      return { ...state, lead: { ...state.lead, status: LeadStatus.ASSIGNED }, logs: log(state, '店长', '分配', '分配给王牌销售') };
+      return { ...state, lead: { ...state.lead, status: LeadStatus.ASSIGNED }, logs: log(state, '经理', '分配', '已分配销售顾问') };
     case 'START_FOLLOWING':
       if (!state.lead) return state;
-      return { ...state, lead: { ...state.lead, status: LeadStatus.FOLLOWING }, logs: log(state, '销售顾问', '跟进', '开始电话联系客户') };
+      return { ...state, lead: { ...state.lead, status: LeadStatus.FOLLOWING }, logs: log(state, '销售', '跟进', '正在联系客户...') };
     case 'TAG_LEAD':
       if (!state.lead) return state;
-      return { ...state, lead: { ...state.lead, tags: [...state.lead.tags, action.payload] }, logs: log(state, '销售顾问', '打标签', `添加标签: ${action.payload}`) };
+      return { ...state, lead: { ...state.lead, tags: [...state.lead.tags, action.payload] }, logs: log(state, '销售', '标记', `添加标签: ${action.payload}`) };
     case 'CONVERT_LEAD':
       if (!state.lead) return state;
       return { 
         ...state, 
         lead: { ...state.lead, status: LeadStatus.CONVERTED },
         quote: { id: 'QT-888', leadId: state.lead.id, versions: [{ versionId: 'V1.0', status: QuoteVersionStatus.DRAFT, createdAt: new Date().toISOString(), isCurrent: true }], currentStatus: QuoteVersionStatus.DRAFT },
-        logs: log(state, '系统', '转化', '线索转化成功。生成报价单 QT-888 (V1.0 草稿)')
+        logs: log(state, '系统', '转化', '生成报价单 V1.0 (草稿)')
       };
     case 'CLOSE_LEAD':
       if (!state.lead) return state;
-      return { ...state, lead: { ...state.lead, status: LeadStatus.INVALID }, logs: log(state, '销售顾问', '关闭', '线索标记为无效') };
-    
-    // Quote Actions
+      return { ...state, lead: { ...state.lead, status: LeadStatus.INVALID }, logs: log(state, '销售', '关闭', '线索无效') };
     case 'PUBLISH_QUOTE':
       if (!state.quote) return state;
-      return { ...state, quote: { ...state.quote, currentStatus: QuoteVersionStatus.PRELIMINARY }, logs: log(state, '销售顾问', '发布', '报价单 V1.0 设为初稿') };
+      return { ...state, quote: { ...state.quote, currentStatus: QuoteVersionStatus.PRELIMINARY }, logs: log(state, '销售', '发布', '报价单 V1.0 初稿') };
     case 'CREATE_MEASUREMENT':
       if (!state.quote) return state;
       return { 
         ...state, 
         measurement: { id: 'MS-101', quoteVersionId: 'V1.0', status: ServiceOrderStatus.PENDING },
-        quote: { ...state.quote, currentStatus: QuoteVersionStatus.MEASURING }, // Sync
-        logs: log(state, '系统', '测量需求', '创建测量任务 MS-101。报价单状态同步为"测量中"')
+        quote: { ...state.quote, currentStatus: QuoteVersionStatus.MEASURING },
+        logs: log(state, '系统', '测量', '创建测量任务 MS-101')
       };
-    
-    // Measurement Actions
     case 'MEASURE_ACTION':
       if (!state.measurement) return state;
       let newMStatus = state.measurement.status;
       let logMsg = '';
-      if (action.payload === 'ASSIGN') { newMStatus = ServiceOrderStatus.ASSIGNING; logMsg = '已指派测量师'; }
-      if (action.payload === 'ACCEPT') { newMStatus = ServiceOrderStatus.WAITING; logMsg = '测量师已接单'; }
-      if (action.payload === 'COMPLETE_SITE') { newMStatus = ServiceOrderStatus.CONFIRMING; logMsg = '上门测量完成，等待确认'; }
-      if (action.payload === 'REJECT') { newMStatus = ServiceOrderStatus.ASSIGNING; logMsg = '测量结果被驳回，重新指派'; }
-      if (action.payload === 'CONFIRM') { newMStatus = ServiceOrderStatus.COMPLETED; logMsg = '测量数据确认无误。'; }
-
-      // Sync Quote if Measurement Completed
+      if (action.payload === 'ASSIGN') { newMStatus = ServiceOrderStatus.ASSIGNING; logMsg = '派单测量'; }
+      if (action.payload === 'ACCEPT') { newMStatus = ServiceOrderStatus.WAITING; logMsg = '测量接单'; }
+      if (action.payload === 'COMPLETE_SITE') { newMStatus = ServiceOrderStatus.CONFIRMING; logMsg = '测量完成'; }
+      if (action.payload === 'REJECT') { newMStatus = ServiceOrderStatus.ASSIGNING; logMsg = '测量驳回'; }
+      if (action.payload === 'CONFIRM') { newMStatus = ServiceOrderStatus.COMPLETED; logMsg = '测量确认'; }
       let updatedQuote = state.quote;
       if (newMStatus === ServiceOrderStatus.COMPLETED && state.quote) {
-          updatedQuote = { ...state.quote, currentStatus: QuoteVersionStatus.REVISED }; // Logic: Measurement Done -> Quote needs Revision
-          logMsg += ' 报价单同步为"需修改(再稿)"。';
+          updatedQuote = { ...state.quote, currentStatus: QuoteVersionStatus.REVISED };
+          logMsg += ' -> 报价重算';
       }
-
       return { 
         ...state, 
         measurement: { ...state.measurement, status: newMStatus },
         quote: updatedQuote,
-        logs: log(state, '测量师', '更新进度', logMsg)
+        logs: log(state, '外勤', '进度', logMsg)
       };
-
     case 'NEW_VERSION':
       if (!state.quote) return state;
       return {
@@ -104,102 +97,71 @@ function simulationReducer(state: SimulationState, action: any): SimulationState
         quote: { 
           ...state.quote, 
           versions: [...state.quote.versions, { versionId: 'V1.1', status: QuoteVersionStatus.DRAFT, createdAt: new Date().toISOString(), isCurrent: true }],
-          currentStatus: QuoteVersionStatus.REVISED // Stays revised until confirmed
+          currentStatus: QuoteVersionStatus.REVISED
         },
-        logs: log(state, '销售顾问', '版本迭代', '基于测量数据创建 V1.1 版本')
+        logs: log(state, '销售', '版本', '创建 V1.1')
       };
-
     case 'CONFIRM_QUOTE':
       if (!state.quote) return state;
       return {
         ...state,
         quote: { ...state.quote, currentStatus: QuoteVersionStatus.CONFIRMED },
         salesOrder: { id: 'SO-9000', quoteId: state.quote.id, quoteVersion: 'V1.1', status: SalesOrderStatus.DRAFT, procurementIds: [] },
-        logs: log(state, '客户', '签字确认', '报价 V1.1 已确认。生成销售订单 SO-9000 (草稿)')
+        logs: log(state, '客户', '签字', '确认报价 -> 生成订单')
       };
-
-    // Sales Actions
     case 'SALES_ACTION':
       if (!state.salesOrder) return state;
       let newSStatus = state.salesOrder.status;
       let sLog = '';
-      if (action.payload === 'CONFIRM') { newSStatus = SalesOrderStatus.CONFIRMED; sLog = '销售订单已确认'; }
-      if (action.payload === 'PROCURE') { newSStatus = SalesOrderStatus.PURCHASING; sLog = '采购信息已录入'; }
-      if (action.payload === 'SHIP') { newSStatus = SalesOrderStatus.SHIPPING; sLog = '物流发货信息已添加'; }
-
-      return {
-        ...state,
-        salesOrder: { ...state.salesOrder, status: newSStatus },
-        logs: log(state, '订单客服', '订单更新', sLog)
-      };
-
+      if (action.payload === 'CONFIRM') { newSStatus = SalesOrderStatus.CONFIRMED; sLog = '订单确认'; }
+      if (action.payload === 'PROCURE') { newSStatus = SalesOrderStatus.PURCHASING; sLog = '采购录入'; }
+      if (action.payload === 'SHIP') { newSStatus = SalesOrderStatus.SHIPPING; sLog = '物流发货'; }
+      return { ...state, salesOrder: { ...state.salesOrder, status: newSStatus }, logs: log(state, '客服', '订单', sLog) };
     case 'CREATE_INSTALL':
       if (!state.salesOrder) return state;
       return {
         ...state,
         salesOrder: { ...state.salesOrder, status: SalesOrderStatus.INSTALLING },
         installation: { id: 'INS-500', salesOrderId: state.salesOrder.id, status: ServiceOrderStatus.PENDING },
-        logs: log(state, '客服', '安装需求', '创建安装任务 INS-500。订单同步为"安装中"')
+        logs: log(state, '客服', '安装', '创建安装单 INS-500')
       };
-
-    // Install Actions
     case 'INSTALL_ACTION':
       if (!state.installation) return state;
       let newIStatus = state.installation.status;
       let iLog = '';
-      if (action.payload === 'ASSIGN') { newIStatus = ServiceOrderStatus.ASSIGNING; iLog = '已指派安装师傅'; }
-      if (action.payload === 'ACCEPT') { newIStatus = ServiceOrderStatus.WAITING; iLog = '师傅已接单'; }
-      if (action.payload === 'COMPLETE_SITE') { newIStatus = ServiceOrderStatus.CONFIRMING; iLog = '安装完成，等待验收'; }
-      if (action.payload === 'UPLOAD_PHOTOS') { iLog = '上传现场照片'; } // Just log
-      if (action.payload === 'CONFIRM') { newIStatus = ServiceOrderStatus.COMPLETED; iLog = '安装验收通过。'; }
-
-      // Sync Sales Order
+      if (action.payload === 'ASSIGN') { newIStatus = ServiceOrderStatus.ASSIGNING; iLog = '派单安装'; }
+      if (action.payload === 'ACCEPT') { newIStatus = ServiceOrderStatus.WAITING; iLog = '安装接单'; }
+      if (action.payload === 'COMPLETE_SITE') { newIStatus = ServiceOrderStatus.CONFIRMING; iLog = '现场完成'; }
+      if (action.payload === 'UPLOAD_PHOTOS') { iLog = '上传照片'; }
+      if (action.payload === 'CONFIRM') { newIStatus = ServiceOrderStatus.COMPLETED; iLog = '安装验收'; }
       let updatedSales = state.salesOrder;
       if (newIStatus === ServiceOrderStatus.COMPLETED && state.salesOrder) {
-        updatedSales = { ...state.salesOrder, status: SalesOrderStatus.RECONCILIATION }; // Move to Recon ready
-        iLog += ' 订单同步为"待对账"。';
+        updatedSales = { ...state.salesOrder, status: SalesOrderStatus.RECONCILIATION };
+        iLog += ' -> 待对账';
       }
-
-      return {
-        ...state,
-        installation: { ...state.installation, status: newIStatus },
-        salesOrder: updatedSales,
-        logs: log(state, '安装师', '更新进度', iLog)
-      };
-
+      return { ...state, installation: { ...state.installation, status: newIStatus }, salesOrder: updatedSales, logs: log(state, '外勤', '进度', iLog) };
     case 'CREATE_RECON':
       if (!state.salesOrder) return state;
       return {
         ...state,
-        reconciliation: { id: 'REC-2024-NOV', salesOrderId: state.salesOrder.id, status: ReconciliationStatus.PENDING },
-        logs: log(state, '财务', '对账初始化', '生成对账结算单。')
+        reconciliation: { id: 'REC-2024', salesOrderId: state.salesOrder.id, status: ReconciliationStatus.PENDING },
+        logs: log(state, '财务', '对账', '生成对账单')
       };
-
     case 'RECON_ACTION':
       if (!state.reconciliation) return state;
       let newRStatus = state.reconciliation.status;
       let rLog = '';
-      if (action.payload === 'START') { newRStatus = ReconciliationStatus.RECONCILING; rLog = '开始核对账目'; }
-      if (action.payload === 'DISCREPANCY') { newRStatus = ReconciliationStatus.DISCREPANCY; rLog = '发现账目差异，需复核'; }
-      if (action.payload === 'ADJUST') { newRStatus = ReconciliationStatus.ADJUSTED; rLog = '差异金额已调整'; }
-      if (action.payload === 'COMPLETE') { newRStatus = ReconciliationStatus.COMPLETED; rLog = '对账完成，订单关闭。'; }
-
-      // Final Closure
+      if (action.payload === 'START') { newRStatus = ReconciliationStatus.RECONCILING; rLog = '开始核对'; }
+      if (action.payload === 'DISCREPANCY') { newRStatus = ReconciliationStatus.DISCREPANCY; rLog = '发现差异'; }
+      if (action.payload === 'ADJUST') { newRStatus = ReconciliationStatus.ADJUSTED; rLog = '调整差异'; }
+      if (action.payload === 'COMPLETE') { newRStatus = ReconciliationStatus.COMPLETED; rLog = '对账完成'; }
       let finalSales = state.salesOrder;
       if (newRStatus === ReconciliationStatus.COMPLETED && state.salesOrder) {
         finalSales = { ...state.salesOrder, status: SalesOrderStatus.COMPLETED };
       }
-
-      return {
-        ...state,
-        reconciliation: { ...state.reconciliation, status: newRStatus },
-        salesOrder: finalSales,
-        logs: log(state, '财务', '对账更新', rLog)
-      };
-
+      return { ...state, reconciliation: { ...state.reconciliation, status: newRStatus }, salesOrder: finalSales, logs: log(state, '财务', '对账', rLog) };
     case 'RESET':
-      return { ...initialState, logs: log(initialState, '系统', '重置', '草稿本已翻页（重置）') };
-    
+      return { ...initialState, logs: log(initialState, '系统', '重置', '系统重置完成') };
     default:
       return state;
   }
@@ -207,191 +169,227 @@ function simulationReducer(state: SimulationState, action: any): SimulationState
 
 // --- APP COMPONENT ---
 
+const StartButton = () => (
+  <button className="flex items-center px-2 py-1 rounded-r-lg space-x-2 xp-button-green h-full mr-4 shadow-md transition-all active:brightness-90">
+    <div className="italic font-bold font-serif text-xl pr-1">Nexus</div>
+    <span className="font-bold text-lg italic">Start</span>
+  </button>
+);
+
+const TaskBarItem = ({ label, icon: Icon, active, onClick }: any) => (
+  <div 
+    onClick={onClick}
+    className={`
+      flex items-center w-40 px-2 py-1 mx-1 cursor-pointer select-none
+      border rounded-[2px]
+      ${active 
+        ? 'bg-[#1D4EBF] border-[#103485] shadow-[inset_1px_1px_2px_rgba(0,0,0,0.5)]' 
+        : 'bg-[#3C81F0] border-[#3C81F0] hover:bg-[#5293FA] shadow-[1px_1px_1px_rgba(255,255,255,0.2)]'}
+    `}
+  >
+    <Icon size={16} className="text-white mr-2" />
+    <span className="text-white text-xs truncate drop-shadow-md">{label}</span>
+  </div>
+);
+
 const App = () => {
   const [activeTab, setActiveTab] = useState<'simulate' | 'dashboard'>('simulate');
   const [state, dispatch] = useReducer(simulationReducer, initialState);
+  const [currentTime, setCurrentTime] = useState('');
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const d = new Date();
+      setCurrentTime(d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
-    <div className="flex h-screen bg-paper text-pencil-dark font-sans selection:bg-gray-300 selection:text-black">
+    <div className="h-screen w-screen flex flex-col overflow-hidden relative selection:bg-[#000080] selection:text-white">
       
-      {/* SIDEBAR - 模拟笔记本侧边的索引标签 */}
-      <aside className="w-16 lg:w-64 flex-shrink-0 border-r-2 border-pencil-dark bg-paper-dark/50 flex flex-col items-center lg:items-stretch relative z-20">
-        {/* Logo区域 */}
-        <div className="h-20 flex items-center justify-center border-b-2 border-dashed border-gray-400 p-4">
-          <div className="w-10 h-10 border-2 border-pencil-dark rounded-full flex items-center justify-center text-pencil-dark font-bold font-display text-2xl bg-white shadow-sm transform -rotate-3">
-            N
-          </div>
-          <div className="hidden lg:block ml-3">
-             <div className="font-display font-bold text-2xl text-pencil-dark tracking-widest">Nexus<span className="text-ink-blue">Flow</span></div>
-             <div className="text-[10px] font-hand text-gray-500 -mt-1 tracking-widest">业务草稿本</div>
-          </div>
+      {/* DESKTOP AREA */}
+      <div className="flex-1 p-4 flex items-center justify-center relative z-10">
+        
+        {/* DESKTOP ICONS (Visual only) */}
+        <div className="absolute top-4 left-4 flex flex-col gap-6">
+           <div className="flex flex-col items-center gap-1 group cursor-pointer w-20">
+              <Monitor size={32} className="text-white drop-shadow-md" strokeWidth={1.5} />
+              <span className="text-white text-xs text-shadow px-1 group-hover:bg-[#0058EE] text-center">我的电脑</span>
+           </div>
+           <div className="flex flex-col items-center gap-1 group cursor-pointer w-20">
+              <div className="w-8 h-8 bg-yellow-200 border border-yellow-400 rounded-sm shadow-md flex items-center justify-center">
+                 <div className="w-6 h-1 bg-yellow-500/20 mb-1"></div>
+              </div>
+              <span className="text-white text-xs text-shadow px-1 group-hover:bg-[#0058EE] text-center">我的文档</span>
+           </div>
         </div>
 
-        {/* 导航 */}
-        <nav className="flex-1 py-6 space-y-4 px-3 font-hand text-lg">
-          <button 
-            onClick={() => setActiveTab('simulate')}
-            className={`w-full flex items-center p-3 rounded-sm border-2 transition-all transform hover:-translate-y-1 hover:shadow-md ${activeTab === 'simulate' ? 'bg-white border-pencil-dark shadow-[2px_2px_0px_#374151]' : 'border-transparent hover:border-gray-300 text-gray-500'}`}
-          >
-            <GitMerge size={20} />
-            <span className="hidden lg:block ml-3">流程模拟</span>
-          </button>
+        {/* MAIN APPLICATION WINDOW */}
+        <div className="w-full h-full max-w-6xl bg-[#ECE9D8] rounded-t-lg shadow-xp-window flex flex-col overflow-hidden border-[3px] border-[#245DDA]">
           
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className={`w-full flex items-center p-3 rounded-sm border-2 transition-all transform hover:-translate-y-1 hover:shadow-md ${activeTab === 'dashboard' ? 'bg-white border-pencil-dark shadow-[2px_2px_0px_#374151]' : 'border-transparent hover:border-gray-300 text-gray-500'}`}
-          >
-            <LayoutDashboard size={20} />
-            <span className="hidden lg:block ml-3">数据看板</span>
-          </button>
-        </nav>
-
-        {/* 底部信息 */}
-        <div className="p-4 border-t-2 border-dashed border-gray-400 hidden lg:block bg-paper">
-          <div className="text-xs text-gray-500 uppercase font-bold tracking-widest mb-2 font-display">系统状态</div>
-          <div className="flex items-center gap-2 text-xs text-pencil-dark font-hand">
-            <div className="w-3 h-3 border border-pencil-dark rounded-full bg-green-100 flex items-center justify-center">
-              <div className="w-1 h-1 bg-pencil-dark rounded-full animate-ping"></div>
+          {/* Title Bar */}
+          <div className="h-8 xp-window-title flex items-center justify-between px-2 select-none">
+            <div className="flex items-center gap-2 text-white font-bold text-sm drop-shadow-md">
+              <Layout size={16} />
+              <span>NexusFlow Enterprise Manager</span>
             </div>
-            运行正常
+            <div className="flex items-center gap-1">
+              <button className="w-5 h-5 bg-[#245DDA] border border-white/50 rounded-sm flex items-center justify-center hover:bg-[#4E85EB]">
+                 <Minimize2 size={12} className="text-white" />
+              </button>
+              <button className="w-5 h-5 bg-[#245DDA] border border-white/50 rounded-sm flex items-center justify-center hover:bg-[#4E85EB]">
+                 <Maximize2 size={12} className="text-white" />
+              </button>
+              <button className="w-5 h-5 bg-[#E62C2C] border border-white/50 rounded-sm flex items-center justify-center hover:bg-[#FF4D4D] shadow-sm">
+                 <X size={14} className="text-white" />
+              </button>
+            </div>
           </div>
-          <div className="mt-2 text-[10px] text-gray-400 font-mono">v2.2.0 (Sketch Ed.)</div>
-        </div>
-      </aside>
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Header - 模拟笔记本顶部 */}
-        <header className="h-16 border-b-2 border-pencil-dark bg-white/80 backdrop-blur flex items-center justify-between px-6 z-10 shadow-sm">
-          <h1 className="text-xl font-display text-pencil-dark">
-            {activeTab === 'simulate' ? '📝 业务流程交互模拟' : '📊 业务数据报表'}
-          </h1>
-          <div className="flex items-center gap-4">
-             <div className="px-3 py-1 bg-white border border-pencil-dark rounded-full text-xs text-gray-500 font-mono transform rotate-1 shadow-sm">
-                环境: 生产 (PROD)
+          {/* Menu Bar (Visual) */}
+          <div className="h-6 bg-[#ECE9D8] border-b border-[#D4D0C8] flex items-center px-2 text-xs text-black select-none">
+             <span className="px-2 py-1 hover:bg-[#0058EE] hover:text-white cursor-pointer">文件(F)</span>
+             <span className="px-2 py-1 hover:bg-[#0058EE] hover:text-white cursor-pointer">编辑(E)</span>
+             <span className="px-2 py-1 hover:bg-[#0058EE] hover:text-white cursor-pointer">视图(V)</span>
+             <span className="px-2 py-1 hover:bg-[#0058EE] hover:text-white cursor-pointer">工具(T)</span>
+             <span className="px-2 py-1 hover:bg-[#0058EE] hover:text-white cursor-pointer">帮助(H)</span>
+          </div>
+
+          {/* Address Bar (Visual) */}
+          <div className="h-8 bg-[#ECE9D8] border-b border-[#D4D0C8] flex items-center px-2 gap-2 text-xs">
+             <span className="text-gray-500">地址(D):</span>
+             <div className="flex-1 bg-white border border-[#7F9DB9] h-5 flex items-center px-2">
+               C:\Program Files\NexusFlow\{activeTab === 'simulate' ? 'Simulation.exe' : 'Dashboard.xls'}
+             </div>
+             <button className="px-2 py-0.5 border border-gray-400 bg-[#F0F0F0] text-black">转到</button>
+          </div>
+
+          {/* Window Body */}
+          <div className="flex-1 flex overflow-hidden">
+             
+             {/* Left Sidebar (Common Tasks) */}
+             <div className="w-48 bg-[#6375D6] p-3 overflow-y-auto hidden md:block" style={{ background: 'linear-gradient(to bottom, #7BA2E7 0%, #6375D6 100%)' }}>
+               <SimulationController state={state} dispatch={dispatch} />
+             </div>
+
+             {/* Main Content (White Area) */}
+             <div className="flex-1 bg-white p-4 overflow-hidden relative flex flex-col">
+               
+               {activeTab === 'simulate' ? (
+                 <div className="h-full flex flex-col gap-4">
+                    {/* Top Pipeline Map */}
+                    <div className="flex-none h-[280px]">
+                      <PipelineMap state={state} />
+                    </div>
+
+                    {/* Bottom Details & Logs (Split View) */}
+                    <div className="flex-1 flex gap-4 min-h-0">
+                       
+                       {/* State Details Group */}
+                       <div className="w-1/2 flex flex-col border border-[#D4D0C8] rounded-sm p-1">
+                          <legend className="text-xs text-[#003399] px-1 font-bold -mt-3 bg-white w-fit">单据详情</legend>
+                          <div className="flex-1 overflow-y-auto bg-white p-2 space-y-2">
+                             {state.lead ? (
+                               <div className="text-xs">
+                                  <div className="font-bold border-b border-gray-200 mb-1">当前线索</div>
+                                  <div>ID: {state.lead.id}</div>
+                                  <div style={{ color: STATUS_COLORS[state.lead.status] }}>状态: {state.lead.status}</div>
+                               </div>
+                             ) : <div className="text-xs text-gray-400">暂无数据</div>}
+                             
+                             {state.quote && (
+                               <div className="text-xs mt-2 pt-2 border-t border-gray-200">
+                                  <div className="font-bold mb-1">报价单</div>
+                                  <div>版本: {state.quote.versions.length} 个</div>
+                                  <div className={STATUS_COLORS[state.quote.currentStatus]}>状态: {state.quote.currentStatus}</div>
+                               </div>
+                             )}
+
+                             {state.salesOrder && (
+                               <div className="text-xs mt-2 pt-2 border-t border-gray-200">
+                                  <div className="font-bold mb-1">销售订单</div>
+                                  <div>ID: {state.salesOrder.id}</div>
+                                  <div className={STATUS_COLORS[state.salesOrder.status]}>状态: {state.salesOrder.status}</div>
+                               </div>
+                             )}
+                          </div>
+                       </div>
+
+                       {/* Logs Group */}
+                       <div className="w-1/2 flex flex-col border border-[#D4D0C8] rounded-sm p-1">
+                          <legend className="text-xs text-[#003399] px-1 font-bold -mt-3 bg-white w-fit">系统日志 (Event Log)</legend>
+                          <div className="flex-1 bg-white overflow-y-auto font-mono text-[10px] p-1 border border-gray-200 shadow-inner">
+                             {state.logs.map((l, i) => (
+                               <div key={i} className="mb-1 border-b border-dotted border-gray-100 pb-1">
+                                  <span className="text-gray-500">[{l.timestamp}]</span>{' '}
+                                  <span className="font-bold text-[#003399]">{l.actor}</span>:{' '}
+                                  <span>{l.action}</span> - {l.detail}
+                               </div>
+                             ))}
+                          </div>
+                       </div>
+
+                    </div>
+                 </div>
+               ) : (
+                 <DashboardView />
+               )}
+
              </div>
           </div>
-        </header>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-hidden relative">
-          
-          <div className="relative z-10 h-full overflow-y-auto p-6 scrollbar-hide">
-            
-            {activeTab === 'dashboard' ? (
-              <DashboardView />
-            ) : (
-              <div className="flex flex-col h-full gap-6">
-                
-                {/* Top: Visualization Map */}
-                <div className="flex-none h-[320px]">
-                   <PipelineMap state={state} />
-                </div>
-
-                {/* Bottom: Split View (Controller + Logs) */}
-                <div className="flex-1 min-h-[400px] flex flex-col lg:flex-row gap-6 pb-20">
-                  
-                  {/* Left: Controls */}
-                  <div className="w-full lg:w-1/3 flex flex-col">
-                    <h2 className="text-pencil-dark font-display text-xl mb-4 flex items-center gap-2 border-b-2 border-dashed border-gray-300 pb-2">
-                       <PenTool size={20} /> 操作控制台
-                    </h2>
-                    <div className="flex-1 sketch-box p-4 bg-white/50 overflow-hidden flex flex-col">
-                       <SimulationController state={state} dispatch={dispatch} />
-                    </div>
-                  </div>
-
-                  {/* Center: State Details */}
-                  <div className="w-full lg:w-1/3 flex flex-col">
-                     <h2 className="text-ink-blue font-display text-xl mb-4 flex items-center gap-2 border-b-2 border-dashed border-gray-300 pb-2">
-                       <FileText size={20} /> 单据状态卡
-                    </h2>
-                    <div className="flex-1 sketch-box p-4 bg-white font-hand text-sm overflow-y-auto custom-scrollbar relative">
-                       {/* 装饰：右上角折角 */}
-                       <div className="absolute top-0 right-0 border-t-[20px] border-r-[20px] border-t-white border-r-gray-200 shadow-sm"></div>
-
-                       <div className="space-y-4 pt-2">
-                          {state.lead && (
-                            <div className="p-3 border border-pencil-dark bg-gray-50 relative">
-                              <div className="text-gray-400 text-xs mb-1 font-sans">线索 LEAD</div>
-                              <div className={`font-bold text-lg ${STATUS_COLORS[state.lead.status].split(' ')[0]}`}>
-                                {state.lead.status === 'new' ? '新线索' : 
-                                 state.lead.status === 'assigned' ? '已分配' :
-                                 state.lead.status === 'following' ? '跟进中' :
-                                 state.lead.status === 'converted' ? '已转化' : '无效'}
-                              </div>
-                              <div className="text-gray-500 mt-1 border-t border-dashed border-gray-300 pt-1">
-                                标签: {state.lead.tags.join(', ') || '(无)'}
-                              </div>
-                            </div>
-                          )}
-                          {state.quote && (
-                            <div className="p-3 border border-pencil-dark bg-gray-50">
-                              <div className="text-gray-400 text-xs mb-1 font-sans">报价 QUOTE</div>
-                              <div className={`font-bold text-lg ${STATUS_COLORS[state.quote.currentStatus].split(' ')[0]}`}>
-                                {state.quote.currentStatus.toUpperCase()}
-                              </div>
-                              <div className="text-gray-500 mt-1 text-xs">版本数: {state.quote.versions.length}</div>
-                            </div>
-                          )}
-                          {state.measurement && (
-                            <div className="p-3 border border-pencil-dark bg-gray-50">
-                              <div className="text-gray-400 text-xs mb-1 font-sans">测量任务 MEASURE</div>
-                              <div className={`font-bold text-lg ${STATUS_COLORS[state.measurement.status].split(' ')[0]}`}>
-                                {state.measurement.status.toUpperCase()}
-                              </div>
-                            </div>
-                          )}
-                          {state.salesOrder && (
-                            <div className="p-3 border border-pencil-dark bg-gray-50">
-                              <div className="text-gray-400 text-xs mb-1 font-sans">销售订单 ORDER</div>
-                              <div className={`font-bold text-lg ${STATUS_COLORS[state.salesOrder.status].split(' ')[0]}`}>
-                                {state.salesOrder.status.toUpperCase()}
-                              </div>
-                            </div>
-                          )}
-                          {state.installation && (
-                            <div className="p-3 border border-pencil-dark bg-gray-50">
-                              <div className="text-gray-400 text-xs mb-1 font-sans">安装任务 INSTALL</div>
-                              <div className={`font-bold text-lg ${STATUS_COLORS[state.installation.status].split(' ')[0]}`}>
-                                {state.installation.status.toUpperCase()}
-                              </div>
-                            </div>
-                          )}
-                       </div>
-                       {!state.lead && <div className="text-gray-400 text-center mt-10 transform -rotate-2">
-                         ( 空白页 ) <br/> 请先录入线索...
-                       </div>}
-                    </div>
-                  </div>
-
-                  {/* Right: Logs */}
-                  <div className="w-full lg:w-1/3 flex flex-col">
-                    <h2 className="text-pencil-dark font-display text-xl mb-4 flex items-center gap-2 border-b-2 border-dashed border-gray-300 pb-2">
-                       <Activity size={20} /> 系统日志
-                    </h2>
-                    <div className="flex-1 sketch-box p-0 bg-[#fffdf5] overflow-hidden flex flex-col border-l-4 border-l-red-200">
-                       <div className="flex-1 overflow-y-auto p-4 space-y-3 font-hand text-sm custom-scrollbar">
-                          {state.logs.map((log, idx) => (
-                            <div key={idx} className="flex gap-2 border-b border-blue-100 pb-2 last:border-0 items-start">
-                               <span className="text-gray-400 shrink-0 text-xs font-sans mt-1">{log.timestamp}</span>
-                               <span className="text-pencil-dark shrink-0 w-16 text-right font-bold bg-gray-100 px-1 rounded-sm text-xs mt-0.5 border border-gray-200">{log.actor}</span>
-                               <div className="flex-1 text-gray-700 leading-snug">
-                                  <span className="text-ink-blue mr-1">[{log.action}]</span>
-                                  {log.detail}
-                                </div>
-                            </div>
-                          ))}
-                       </div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            )}
+          {/* Status Bar */}
+          <div className="h-6 bg-[#ECE9D8] border-t border-[#D4D0C8] flex items-center px-2 text-xs gap-4 shadow-xp-inset">
+             <div className="flex-1 truncate">Ready</div>
+             <div className="w-px h-4 bg-[#A0A0A0]"></div>
+             <div className="w-20">Num Lock</div>
+             <div className="w-px h-4 bg-[#A0A0A0]"></div>
+             <div className="w-32 truncate">{activeTab === 'simulate' ? 'Simulation Mode' : 'Reporting Mode'}</div>
           </div>
         </div>
-      </main>
+
+      </div>
+
+      {/* TASKBAR */}
+      <div className="h-8 bg-[#245DDA] border-t-2 border-[#3F80E8] flex items-center justify-between px-0 relative z-50 shadow-md">
+        
+        {/* Start Button & Quick Launch */}
+        <div className="flex items-center h-full pl-0">
+          <StartButton />
+          
+          <div className="flex gap-2 px-2 border-r border-[#153E96] h-full items-center mr-2">
+             {/* Quick Launch Icons */}
+             <div className="w-4 h-4 bg-white rounded-sm opacity-80 hover:opacity-100 cursor-pointer"></div>
+             <div className="w-4 h-4 bg-blue-200 rounded-sm opacity-80 hover:opacity-100 cursor-pointer"></div>
+          </div>
+
+          {/* Running Tasks */}
+          <div className="flex items-center">
+            <TaskBarItem 
+              label="业务流程模拟器" 
+              icon={Layout} 
+              active={activeTab === 'simulate'} 
+              onClick={() => setActiveTab('simulate')}
+            />
+            <TaskBarItem 
+              label="企业数据看板.xls" 
+              icon={Monitor} 
+              active={activeTab === 'dashboard'} 
+              onClick={() => setActiveTab('dashboard')}
+            />
+          </div>
+        </div>
+
+        {/* System Tray */}
+        <div className="h-full bg-[#1594E6] border-l border-[#103485] px-3 flex items-center gap-2 shadow-[inset_2px_2px_2px_rgba(0,0,0,0.2)]">
+           <div className="w-4 h-4 bg-white rounded-full text-[8px] flex items-center justify-center text-[#245DDA] font-bold border border-[#103485]">
+             N
+           </div>
+           <span className="text-white text-xs font-sans drop-shadow-sm">{currentTime}</span>
+        </div>
+      </div>
+
     </div>
   );
 };

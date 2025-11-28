@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   SimulationState, 
   LeadStatus, 
@@ -7,314 +7,236 @@ import {
   SalesOrderStatus, 
   ReconciliationStatus
 } from '../types';
-import { User, ClipboardList, PenTool, Truck, DollarSign, CheckCircle, XCircle, RotateCw, PenLine } from 'lucide-react';
+import { ChevronUp, ChevronDown, User, FileText, Settings, CreditCard, PenTool } from 'lucide-react';
 
 interface Props {
   state: SimulationState;
   dispatch: (action: any) => void;
 }
 
-export const SimulationController: React.FC<Props> = ({ state, dispatch }) => {
-
-  const Section = ({ title, icon: Icon, children, active }: any) => (
-    <div className={`p-4 mb-6 transition-all duration-300 relative ${active ? 'opacity-100' : 'opacity-50 grayscale'}`}>
-      {/* 类似便利贴或方框的标题背景 */}
-      <div className="absolute -top-3 left-2 bg-white px-2 border-2 border-pencil-dark transform -rotate-1 z-10">
-        <div className="flex items-center gap-2 text-pencil-dark font-display text-lg">
-          <Icon size={18} strokeWidth={2.5} />
-          <span>{title}</span>
-        </div>
-      </div>
-      
-      {/* 内容区域 */}
-      <div className={`pt-6 pb-4 px-4 border-2 border-pencil-dark ${active ? 'bg-white' : 'bg-transparent border-dashed'}`}>
-        <div className="space-y-3">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-
-  const ActionButton = ({ onClick, label, variant = 'primary', disabled = false }: any) => {
-    // 手绘风格按钮：使用边框和特殊的hover效果
-    let variantClass = "";
-    
-    switch(variant) {
-      case 'primary': // 铅笔黑
-        variantClass = "border-pencil-dark text-pencil-dark hover:bg-pencil-dark hover:text-white";
-        break;
-      case 'success': // 绿色/深黑
-        variantClass = "border-pencil-dark text-pencil-dark hover:border-double font-bold bg-green-50/50 hover:bg-green-100";
-        break;
-      case 'warning': // 橙色/墨水蓝
-        variantClass = "border-ink-blue text-ink-blue hover:bg-blue-50";
-        break;
-      case 'danger': // 红色
-        variantClass = "border-ink-red text-ink-red hover:bg-red-50";
-        break;
-    }
-
-    if (disabled) variantClass = "border-gray-300 text-gray-300 cursor-not-allowed border-dashed";
-
-    return (
-      <button 
-        onClick={onClick} 
-        disabled={disabled}
-        className={`w-full py-2 px-3 text-sm font-hand tracking-widest transition-all duration-200 border-2 rounded-sm flex items-center justify-center gap-2 transform hover:-translate-y-0.5 active:translate-y-0 ${variantClass}`}
-        style={{ borderRadius: '255px 15px 225px 15px / 15px 225px 15px 255px' }} // 手绘不规则圆角
-      >
-        {label}
-        {!disabled && <PenLine size={14} className="opacity-50" />}
-      </button>
-    );
-  };
-
-  // 逻辑辅助
-  const hasLead = !!state.lead;
-  const leadActive = hasLead && state.lead?.status !== LeadStatus.CONVERTED && state.lead?.status !== LeadStatus.INVALID;
-  
-  const hasQuote = !!state.quote;
-  const quoteActive = hasQuote && state.quote?.currentStatus !== QuoteVersionStatus.CONFIRMED && state.quote?.currentStatus !== QuoteVersionStatus.CANCELLED;
-  
-  const hasMeasurement = !!state.measurement;
-  const measureActive = hasMeasurement && state.measurement?.status !== ServiceOrderStatus.COMPLETED && state.measurement?.status !== ServiceOrderStatus.CANCELLED;
-  
-  const hasSales = !!state.salesOrder;
-  const salesActive = hasSales && state.salesOrder?.status !== SalesOrderStatus.COMPLETED && state.salesOrder?.status !== SalesOrderStatus.CANCELLED;
-
-  const hasInstall = !!state.installation;
-  const installActive = hasInstall && state.installation?.status !== ServiceOrderStatus.COMPLETED && state.installation?.status !== ServiceOrderStatus.CANCELLED;
-
-  const hasReconcile = !!state.reconciliation;
-  const reconActive = hasReconcile && state.reconciliation?.status !== ReconciliationStatus.COMPLETED && state.reconciliation?.status !== ReconciliationStatus.CANCELLED;
+// XP Style Collapsible Panel
+const XPPanel = ({ title, icon: Icon, children, defaultOpen = true, active = true }: any) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="h-full overflow-y-auto pr-2 custom-scrollbar">
+    <div className={`mb-3 overflow-hidden rounded-t-[3px] shadow-sm ${active ? 'opacity-100' : 'opacity-60 grayscale'}`}>
+      {/* Header */}
+      <div 
+        className="xp-sidebar-header-blue h-6 px-3 flex items-center justify-between cursor-pointer border-[1px] border-[#fff] border-b-0"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center gap-2">
+          {Icon && <Icon size={14} className="text-white" />}
+          <span className="text-white font-bold text-xs tracking-wide">{title}</span>
+        </div>
+        <div className="bg-white rounded-full p-[1px] border border-[#245DDA]">
+          {isOpen ? <ChevronUp size={10} color="#245DDA"/> : <ChevronDown size={10} color="#245DDA"/>}
+        </div>
+      </div>
       
-      {/* 线索阶段 */}
-      <Section title="1. 线索管理" icon={User} active={!hasLead || leadActive}>
+      {/* Body */}
+      {isOpen && (
+        <div className="bg-[#D6DFF7] p-3 border border-t-0 border-white">
+          <div className="space-y-2">
+            {children}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// XP Style Link Button
+const XPTaskButton = ({ onClick, label, variant = 'normal', disabled = false, icon = null }: any) => {
+  if (disabled) return null; // XP hides unavailable tasks usually
+
+  // Variants map to different "icon" colors or styles if needed
+  // For XP sidebar tasks, they are usually just links with icons
+  
+  return (
+    <button 
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full text-left flex items-start group transition-all"
+    >
+      <div className="mr-2 mt-0.5">
+         {/* Simulate the little icon next to tasks */}
+         <div className={`w-4 h-4 rounded shadow-sm flex items-center justify-center border border-gray-400 ${
+           variant === 'success' ? 'bg-green-100' : 
+           variant === 'danger' ? 'bg-red-100' : 'bg-white'
+         }`}>
+           {icon ? icon : <div className="w-2 h-2 bg-[#245DDA] rounded-full"></div>}
+         </div>
+      </div>
+      <span className={`text-[11px] text-[#215DC6] group-hover:underline group-hover:text-[#428EFF] leading-tight ${variant === 'success' ? 'font-bold' : ''}`}>
+        {label}
+      </span>
+    </button>
+  );
+};
+
+export const SimulationController: React.FC<Props> = ({ state, dispatch }) => {
+  // Logic Helpers
+  const hasLead = !!state.lead;
+  const leadActive = hasLead && state.lead?.status !== LeadStatus.CONVERTED && state.lead?.status !== LeadStatus.INVALID;
+  const hasQuote = !!state.quote;
+  const quoteActive = hasQuote && state.quote?.currentStatus !== QuoteVersionStatus.CONFIRMED && state.quote?.currentStatus !== QuoteVersionStatus.CANCELLED;
+  const hasMeasurement = !!state.measurement;
+  const hasSales = !!state.salesOrder;
+  const salesActive = hasSales && state.salesOrder?.status !== SalesOrderStatus.COMPLETED;
+  const hasInstall = !!state.installation;
+  const hasReconcile = !!state.reconciliation;
+
+  return (
+    <div className="h-full overflow-y-auto pr-1">
+      
+      {/* 1. 线索任务 */}
+      <XPPanel title="线索任务" icon={User} active={!hasLead || leadActive}>
         {!hasLead ? (
-          <ActionButton 
-            label="✍️ 录入新线索" 
-            onClick={() => dispatch({ type: 'CREATE_LEAD' })} 
-          />
+          <XPTaskButton label="录入新线索" onClick={() => dispatch({ type: 'CREATE_LEAD' })} />
         ) : (
           <>
             {state.lead?.status === LeadStatus.NEW && (
-              <ActionButton 
-                label="分配销售顾问" 
-                onClick={() => dispatch({ type: 'ASSIGN_LEAD' })} 
-              />
+              <XPTaskButton label="分配销售顾问" onClick={() => dispatch({ type: 'ASSIGN_LEAD' })} />
             )}
             {state.lead?.status === LeadStatus.ASSIGNED && (
-              <ActionButton 
-                label="开始跟进客户" 
-                onClick={() => dispatch({ type: 'START_FOLLOWING' })} 
-              />
+              <XPTaskButton label="开始跟进客户" onClick={() => dispatch({ type: 'START_FOLLOWING' })} />
             )}
             {state.lead?.status === LeadStatus.FOLLOWING && (
-              <div className="grid grid-cols-2 gap-3">
-                 <ActionButton 
-                  label="标记：已报价" 
-                  variant="warning"
-                  onClick={() => dispatch({ type: 'TAG_LEAD', payload: '已报价' })} 
-                />
-                <ActionButton 
-                  label="转化成功" 
-                  variant="success"
-                  onClick={() => dispatch({ type: 'CONVERT_LEAD' })} 
-                />
-                 <ActionButton 
-                  label="关闭无效线索" 
-                  variant="danger"
-                  onClick={() => dispatch({ type: 'CLOSE_LEAD' })} 
-                />
-              </div>
+              <>
+                <XPTaskButton label="标记: 已报价" onClick={() => dispatch({ type: 'TAG_LEAD', payload: '已报价' })} />
+                <XPTaskButton label="转化成功 (生成报价单)" variant="success" onClick={() => dispatch({ type: 'CONVERT_LEAD' })} />
+                <XPTaskButton label="关闭无效线索" variant="danger" onClick={() => dispatch({ type: 'CLOSE_LEAD' })} />
+              </>
             )}
           </>
         )}
-      </Section>
+      </XPPanel>
 
-      {/* 报价阶段 */}
-      <Section title="2. 报价与版本" icon={ClipboardList} active={quoteActive}>
+      {/* 2. 报价任务 */}
+      <XPPanel title="报价管理" icon={FileText} active={quoteActive}>
         {hasQuote && !hasSales ? (
           <>
-             <div className="text-sm font-hand text-gray-500 mb-2 border-b border-dashed border-gray-300 pb-1">当前状态: {state.quote?.currentStatus}</div>
-             
-             {/* 草稿动作 */}
-             {state.quote?.currentStatus === QuoteVersionStatus.DRAFT && (
-               <ActionButton 
-                 label="发布为初稿" 
-                 onClick={() => dispatch({ type: 'PUBLISH_QUOTE' })} 
-               />
-             )}
-
-             {/* 初稿动作 */}
-             {state.quote?.currentStatus === QuoteVersionStatus.PRELIMINARY && (
-               <div className="space-y-2">
-                 {!hasMeasurement && (
-                   <ActionButton 
-                     label="上传户型测量需求" 
-                     variant="warning"
-                     onClick={() => dispatch({ type: 'CREATE_MEASUREMENT' })} 
-                   />
-                 )}
-               </div>
-             )}
-             
-             {/* 测量中 */}
-             {state.quote?.currentStatus === QuoteVersionStatus.MEASURING && (
-                <div className="text-sm text-pencil-dark font-hand text-center p-2 bg-gray-100 rounded-sm transform rotate-1 border border-gray-300">
-                  ⏳ 等待测量数据回传...
-                </div>
-             )}
-
-             {/* 再稿动作 */}
-             {state.quote?.currentStatus === QuoteVersionStatus.REVISED && (
-                <div className="grid grid-cols-2 gap-3">
-                   <ActionButton 
-                     label="客户确认签字" 
-                     variant="success"
-                     onClick={() => dispatch({ type: 'CONFIRM_QUOTE' })} 
-                   />
-                   <ActionButton 
-                     label="创建新版本 (V1.2)" 
-                     variant="primary"
-                     onClick={() => dispatch({ type: 'NEW_VERSION' })} 
-                   />
-                </div>
-             )}
+            {state.quote?.currentStatus === QuoteVersionStatus.DRAFT && (
+               <XPTaskButton label="发布为初稿" onClick={() => dispatch({ type: 'PUBLISH_QUOTE' })} />
+            )}
+            {state.quote?.currentStatus === QuoteVersionStatus.PRELIMINARY && !hasMeasurement && (
+               <XPTaskButton label="请求上门测量" onClick={() => dispatch({ type: 'CREATE_MEASUREMENT' })} />
+            )}
+            {state.quote?.currentStatus === QuoteVersionStatus.MEASURING && (
+               <div className="text-[10px] text-gray-500 italic ml-6">等待测量结果...</div>
+            )}
+            {state.quote?.currentStatus === QuoteVersionStatus.REVISED && (
+               <>
+                 <XPTaskButton label="客户确认签字" variant="success" onClick={() => dispatch({ type: 'CONFIRM_QUOTE' })} />
+                 <XPTaskButton label="创建新版本 (V1.2)" onClick={() => dispatch({ type: 'NEW_VERSION' })} />
+               </>
+            )}
           </>
         ) : (
-          <div className="text-sm text-gray-400 font-hand italic text-center">...等待线索转化...</div>
+           <div className="text-[10px] text-gray-500 italic ml-6">无可用任务</div>
         )}
-      </Section>
+      </XPPanel>
 
-      {/* 测量单子阶段 */}
-      {hasMeasurement && (
-        <Section title="2a. 测量任务单" icon={PenTool} active={measureActive}>
-          <div className="text-sm font-hand text-gray-500 mb-2">进度: {state.measurement?.status}</div>
+      {/* 2a. 测量 */}
+      {hasMeasurement && state.measurement?.status !== ServiceOrderStatus.COMPLETED && (
+        <XPPanel title="测量详情" icon={Settings} active={true}>
           {state.measurement?.status === ServiceOrderStatus.PENDING && (
-             <ActionButton label="指派测量师" onClick={() => dispatch({ type: 'MEASURE_ACTION', payload: 'ASSIGN' })} />
+             <XPTaskButton label="指派测量师" onClick={() => dispatch({ type: 'MEASURE_ACTION', payload: 'ASSIGN' })} />
           )}
           {state.measurement?.status === ServiceOrderStatus.ASSIGNING && (
-             <ActionButton label="测量师接单" onClick={() => dispatch({ type: 'MEASURE_ACTION', payload: 'ACCEPT' })} />
+             <XPTaskButton label="测量师接单" onClick={() => dispatch({ type: 'MEASURE_ACTION', payload: 'ACCEPT' })} />
           )}
           {state.measurement?.status === ServiceOrderStatus.WAITING && (
-             <ActionButton label="完成上门测量" onClick={() => dispatch({ type: 'MEASURE_ACTION', payload: 'COMPLETE_SITE' })} />
+             <XPTaskButton label="完成上门测量" onClick={() => dispatch({ type: 'MEASURE_ACTION', payload: 'COMPLETE_SITE' })} />
           )}
           {state.measurement?.status === ServiceOrderStatus.CONFIRMING && (
-             <div className="grid grid-cols-2 gap-3">
-               <ActionButton label="驳回重测" variant="danger" onClick={() => dispatch({ type: 'MEASURE_ACTION', payload: 'REJECT' })} />
-               <ActionButton label="确认测量结果" variant="success" onClick={() => dispatch({ type: 'MEASURE_ACTION', payload: 'CONFIRM' })} />
-             </div>
+             <>
+               <XPTaskButton label="确认测量结果" variant="success" onClick={() => dispatch({ type: 'MEASURE_ACTION', payload: 'CONFIRM' })} />
+               <XPTaskButton label="驳回重测" variant="danger" onClick={() => dispatch({ type: 'MEASURE_ACTION', payload: 'REJECT' })} />
+             </>
           )}
-          {state.measurement?.status === ServiceOrderStatus.COMPLETED && (
-             <div className="text-sm text-pencil-dark font-bold font-hand flex items-center gap-1 justify-center border-b-2 border-pencil-dark pb-1">
-               <CheckCircle size={16}/> 数据已同步至报价
-             </div>
-          )}
-        </Section>
+        </XPPanel>
       )}
 
-      {/* 销售单阶段 */}
-      <Section title="3. 销售订单" icon={DollarSign} active={salesActive}>
+      {/* 3. 订单任务 */}
+      <XPPanel title="订单与安装" icon={Settings} active={salesActive}>
          {hasSales ? (
            <>
-            <div className="text-sm font-hand text-gray-500 mb-2">状态: {state.salesOrder?.status}</div>
-            
             {state.salesOrder?.status === SalesOrderStatus.DRAFT && (
-               <ActionButton label="确认生成销售单" onClick={() => dispatch({ type: 'SALES_ACTION', payload: 'CONFIRM' })} />
+               <XPTaskButton label="确认生成正式订单" onClick={() => dispatch({ type: 'SALES_ACTION', payload: 'CONFIRM' })} />
             )}
-            
             {state.salesOrder?.status === SalesOrderStatus.CONFIRMED && (
-               <ActionButton label="录入采购信息" variant="primary" onClick={() => dispatch({ type: 'SALES_ACTION', payload: 'PROCURE' })} />
+               <XPTaskButton label="录入采购信息" onClick={() => dispatch({ type: 'SALES_ACTION', payload: 'PROCURE' })} />
             )}
-
             {state.salesOrder?.status === SalesOrderStatus.PURCHASING && (
-               <ActionButton label="添加物流信息 (发货)" variant="warning" onClick={() => dispatch({ type: 'SALES_ACTION', payload: 'SHIP' })} />
+               <XPTaskButton label="添加物流发货信息" onClick={() => dispatch({ type: 'SALES_ACTION', payload: 'SHIP' })} />
             )}
-
             {state.salesOrder?.status === SalesOrderStatus.SHIPPING && !hasInstall && (
-               <ActionButton label="安排上门安装" variant="success" onClick={() => dispatch({ type: 'CREATE_INSTALL' })} />
-            )}
-
-            {state.salesOrder?.status === SalesOrderStatus.INSTALLING && (
-               <div className="text-sm text-pencil-dark font-hand italic text-center border-2 border-dashed border-gray-300 p-2">
-                  🚧 安装作业进行中...
-                </div>
+               <XPTaskButton label="安排上门安装" variant="success" onClick={() => dispatch({ type: 'CREATE_INSTALL' })} />
             )}
             
-            {/* 销售单等待安装完成后进入对账 */}
-            {state.salesOrder?.status === SalesOrderStatus.RECONCILIATION && !hasReconcile && (
-               <ActionButton label="生成对账结算单" onClick={() => dispatch({ type: 'CREATE_RECON' })} />
+            {/* Install Actions embedded */}
+            {hasInstall && state.installation?.status !== ServiceOrderStatus.COMPLETED && (
+              <div className="ml-2 pl-2 border-l border-white/50 my-2">
+                 <div className="text-[10px] text-[#245DDA] font-bold mb-1">安装进度:</div>
+                 {state.installation?.status === ServiceOrderStatus.PENDING && (
+                    <XPTaskButton label="指派安装师傅" onClick={() => dispatch({ type: 'INSTALL_ACTION', payload: 'ASSIGN' })} />
+                 )}
+                 {state.installation?.status === ServiceOrderStatus.ASSIGNING && (
+                    <XPTaskButton label="师傅接单" onClick={() => dispatch({ type: 'INSTALL_ACTION', payload: 'ACCEPT' })} />
+                 )}
+                 {state.installation?.status === ServiceOrderStatus.WAITING && (
+                    <XPTaskButton label="完成上门安装" onClick={() => dispatch({ type: 'INSTALL_ACTION', payload: 'COMPLETE_SITE' })} />
+                 )}
+                 {state.installation?.status === ServiceOrderStatus.CONFIRMING && (
+                    <>
+                      <XPTaskButton label="上传现场照片" onClick={() => dispatch({ type: 'INSTALL_ACTION', payload: 'UPLOAD_PHOTOS' })} />
+                      <XPTaskButton label="确认安装验收" variant="success" onClick={() => dispatch({ type: 'INSTALL_ACTION', payload: 'CONFIRM' })} />
+                    </>
+                 )}
+              </div>
             )}
-
+            
+            {state.salesOrder?.status === SalesOrderStatus.RECONCILIATION && !hasReconcile && (
+               <XPTaskButton label="转入财务对账" onClick={() => dispatch({ type: 'CREATE_RECON' })} />
+            )}
            </>
          ) : (
-           <div className="text-sm text-gray-400 font-hand italic text-center">...等待报价确认...</div>
+           <div className="text-[10px] text-gray-500 italic ml-6">无可用任务</div>
          )}
-      </Section>
+      </XPPanel>
 
-      {/* 安装单子阶段 */}
-      {hasInstall && (
-        <Section title="3a. 安装任务单" icon={Truck} active={installActive}>
-          <div className="text-sm font-hand text-gray-500 mb-2">进度: {state.installation?.status}</div>
-          {state.installation?.status === ServiceOrderStatus.PENDING && (
-             <ActionButton label="指派安装师傅" onClick={() => dispatch({ type: 'INSTALL_ACTION', payload: 'ASSIGN' })} />
-          )}
-          {state.installation?.status === ServiceOrderStatus.ASSIGNING && (
-             <ActionButton label="师傅接单" onClick={() => dispatch({ type: 'INSTALL_ACTION', payload: 'ACCEPT' })} />
-          )}
-          {state.installation?.status === ServiceOrderStatus.WAITING && (
-             <ActionButton label="完成上门安装" onClick={() => dispatch({ type: 'INSTALL_ACTION', payload: 'COMPLETE_SITE' })} />
-          )}
-          {state.installation?.status === ServiceOrderStatus.CONFIRMING && (
-             <div className="grid grid-cols-2 gap-3">
-               <ActionButton label="上传现场照片" variant="primary" onClick={() => dispatch({ type: 'INSTALL_ACTION', payload: 'UPLOAD_PHOTOS' })} />
-               <ActionButton label="确认安装验收" variant="success" onClick={() => dispatch({ type: 'INSTALL_ACTION', payload: 'CONFIRM' })} />
-             </div>
-          )}
-        </Section>
-      )}
-
-      {/* 对账阶段 */}
+      {/* 4. 财务 */}
       {hasReconcile && (
-        <Section title="4. 财务对账与结单" icon={RotateCw} active={reconActive}>
-           <div className="text-sm font-hand text-gray-500 mb-2">状态: {state.reconciliation?.status}</div>
+        <XPPanel title="财务中心" icon={CreditCard} active={true}>
            {state.reconciliation?.status === ReconciliationStatus.PENDING && (
-             <ActionButton label="开始对账流程" onClick={() => dispatch({ type: 'RECON_ACTION', payload: 'START' })} />
+             <XPTaskButton label="开始对账流程" onClick={() => dispatch({ type: 'RECON_ACTION', payload: 'START' })} />
            )}
            {state.reconciliation?.status === ReconciliationStatus.RECONCILING && (
-             <div className="grid grid-cols-2 gap-3">
-                <ActionButton label="报告账目差异" variant="danger" onClick={() => dispatch({ type: 'RECON_ACTION', payload: 'DISCREPANCY' })} />
-                <ActionButton label="账目核对一致 (完成)" variant="success" onClick={() => dispatch({ type: 'RECON_ACTION', payload: 'COMPLETE' })} />
-             </div>
+             <>
+                <XPTaskButton label="报告账目差异" variant="danger" onClick={() => dispatch({ type: 'RECON_ACTION', payload: 'DISCREPANCY' })} />
+                <XPTaskButton label="核对无误 (结单)" variant="success" onClick={() => dispatch({ type: 'RECON_ACTION', payload: 'COMPLETE' })} />
+             </>
            )}
            {state.reconciliation?.status === ReconciliationStatus.DISCREPANCY && (
-             <ActionButton label="调整并重试" variant="warning" onClick={() => dispatch({ type: 'RECON_ACTION', payload: 'ADJUST' })} />
+             <XPTaskButton label="调整并重试" onClick={() => dispatch({ type: 'RECON_ACTION', payload: 'ADJUST' })} />
            )}
            {state.reconciliation?.status === ReconciliationStatus.ADJUSTED && (
-             <ActionButton label="重新开始对账" onClick={() => dispatch({ type: 'RECON_ACTION', payload: 'START' })} />
+             <XPTaskButton label="重新对账" onClick={() => dispatch({ type: 'RECON_ACTION', payload: 'START' })} />
            )}
            {state.reconciliation?.status === ReconciliationStatus.COMPLETED && (
-             <div className="p-3 bg-pencil-dark text-white text-center font-display text-xl transform rotate-2 shadow-lg border-2 border-gray-800">
-               <CheckCircle className="inline mr-2" size={20}/>
-               全流程完结
-             </div>
+             <div className="text-xs text-green-700 font-bold ml-6">业务已完结</div>
            )}
-        </Section>
+        </XPPanel>
       )}
 
-      {/* 重置 */}
-      <div className="pt-8 pb-4">
-        <button 
-          onClick={() => dispatch({type: 'RESET'})}
-          className="w-full py-3 border-2 border-gray-300 border-dashed text-gray-400 hover:border-red-400 hover:text-red-500 rounded font-hand tracking-widest transition-colors"
-        >
-          - 擦除并重新开始 (Reset) -
-        </button>
-      </div>
+      {/* 其它 */}
+      <XPPanel title="其它位置" icon={Settings} active={true} defaultOpen={false}>
+         <XPTaskButton label="重置系统状态" variant="danger" onClick={() => dispatch({type: 'RESET'})} />
+         <XPTaskButton label="控制面板" disabled={true} />
+         <XPTaskButton label="网络连接" disabled={true} />
+      </XPPanel>
 
     </div>
   );

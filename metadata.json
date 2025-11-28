@@ -1,5 +1,5 @@
 {
-  "name": "NexusFlow: 业务单据手绘板",
-  "description": "高保真业务单据生命周期可视化系统。采用手绘素描风格，在草稿纸上模拟线索、报价、测量、销售、安装及对账的全流程流转。",
+  "name": "NexusFlow XP: 企业版",
+  "description": "基于 Windows XP 风格构建的业务单据生命周期管理系统。经典的 Luna 界面，带您重温桌面软件的黄金时代。",
   "requestFramePermissions": []
 }

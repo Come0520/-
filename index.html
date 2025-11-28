@@ -3,47 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NexusFlow | 单据生命周期草稿本</title>
+    <title>NexusFlow XP | 企业管理系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;500;700&family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: {
-              sans: ['"Noto Serif SC"', 'serif'],
-              display: ['"Ma Shan Zheng"', 'cursive'],
-              hand: ['"Zhi Mang Xing"', 'cursive'],
+              sans: ['Tahoma', 'Arial', 'Microsoft YaHei', 'sans-serif'],
+              mono: ['"Courier New"', 'monospace'],
             },
             colors: {
-              paper: {
-                DEFAULT: '#fdfbf7',
-                dark: '#f0ece2',
-                grid: '#e5e7eb',
-              },
-              pencil: {
-                light: '#9ca3af',
-                DEFAULT: '#374151', // Graphite
-                dark: '#111827',
-              },
-              ink: {
-                blue: '#2563eb', // Pen blue
-                red: '#dc2626', // Grading red
+              xp: {
+                blue: {
+                  light: '#628CE8', // Title bar light
+                  DEFAULT: '#245DDA', // Title bar dark
+                  dark: '#003399',
+                },
+                beige: '#ECE9D8', // Window background
+                taskbar: '#245DDA',
+                green: {
+                  start: '#3C8B18',
+                  hover: '#4EBA23'
+                },
+                orange: '#E68B2C', // Highlight
               }
             },
-            animation: {
-              'scribble': 'scribble 0.5s ease-in-out infinite alternate',
-              'draw': 'draw 1s ease-out forwards',
-            },
-            keyframes: {
-              'scribble': {
-                '0%': { transform: 'rotate(-1deg)' },
-                '100%': { transform: 'rotate(1deg)' },
-              },
-              'draw': {
-                '0%': { strokeDasharray: '0, 1000' },
-                '100%': { strokeDasharray: '1000, 0' },
-              }
+            boxShadow: {
+              'xp-window': '4px 4px 10px rgba(0,0,0,0.5)',
+              'xp-inset': 'inset 1px 1px 0px #8e8e8e, inset -1px -1px 0px #ffffff',
+              'xp-outset': 'inset 1px 1px 0px #ffffff, inset -1px -1px 0px #8e8e8e, 1px 1px 2px rgba(0,0,0,0.2)',
             }
           }
         }
@@ -51,64 +40,83 @@
     </script>
     <style>
       body {
-        background-color: #fdfbf7;
-        color: #374151;
-        background-image: 
-          linear-gradient(#e5e7eb 1px, transparent 1px),
-          linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
-        background-size: 20px 20px;
-        font-family: "Noto Serif SC", serif;
-      }
-      
-      /* 手绘边框效果 */
-      .sketch-box {
-        background: #fff;
-        border: 2px solid #374151;
-        border-radius: 2px 255px 3px 25px / 255px 5px 225px 3px;
-        box-shadow: 2px 3px 0px rgba(0,0,0,0.1);
-        transition: all 0.2s ease;
-      }
-      
-      .sketch-box:hover {
-        box-shadow: 4px 5px 0px rgba(0,0,0,0.2);
-        transform: translateY(-1px);
-      }
-
-      .sketch-btn {
-        border: 2px solid #374151;
-        background: transparent;
-        font-family: "Ma Shan Zheng", cursive;
-        position: relative;
+        /* Bliss Wallpaper approximation */
+        background: linear-gradient(to bottom, #5B95E7 0%, #89B6F1 40%, #8DBBF6 50%, #6BA0E5 100%);
+        font-family: 'Tahoma', sans-serif;
         overflow: hidden;
       }
       
-      .sketch-btn:disabled {
-        border-color: #9ca3af;
-        color: #9ca3af;
-        border-style: dashed;
-        cursor: not-allowed;
+      /* Bliss Hill */
+      body::after {
+        content: '';
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 30%;
+        background: radial-gradient(ellipse at center, #84C556 0%, #46961F 100%);
+        z-index: -1;
+        border-top-left-radius: 50% 100px;
+        border-top-right-radius: 50% 50px;
       }
 
-      /* 滚动条样式 */
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 8px;
+      /* XP Scrollbar */
+      ::-webkit-scrollbar {
+        width: 16px;
+        height: 16px;
+        background-color: #ECE9D8;
       }
-      .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
+      ::-webkit-scrollbar-thumb {
+        background-color: #C2D5F2;
+        border: 1px solid #fff;
+        border-right-color: #999;
+        border-bottom-color: #999;
+        box-shadow: inset 1px 1px 0 #fff;
       }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: #9ca3af;
-        border-radius: 20px;
-        border: 2px solid transparent;
-        background-clip: content-box;
+      ::-webkit-scrollbar-button {
+        background-color: #ECE9D8;
+        width: 16px;
+        height: 16px;
+        border: 1px solid #fff;
+        border-right-color: #999;
+        border-bottom-color: #999;
+      }
+
+      .xp-window-title {
+        background: linear-gradient(to bottom, #0058EE 0%, #3593FF 4%, #288EFF 6%, #127DFF 8%, #0369FE 10%, #0261FE 14%, #0058EE 37%, #0055EA 57%, #0052E6 83%, #004CE0 100%);
+        text-shadow: 1px 1px 1px #000;
       }
       
-      .scrollbar-hide::-webkit-scrollbar {
-          display: none;
+      .xp-sidebar-header {
+        background: linear-gradient(to right, #FFF 0%, #C6D3F7 100%);
       }
-      .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
+      .xp-sidebar-header-blue {
+        background: linear-gradient(to bottom, #8CAFFF 0%, #245DDA 100%);
+      }
+
+      .xp-button {
+        background: linear-gradient(to bottom, #fff 0%, #ece9d8 100%);
+        border: 1px solid #003c74;
+        border-radius: 3px;
+        box-shadow: inset 0 0 2px #fff;
+      }
+      .xp-button:hover {
+        box-shadow: inset 0 0 2px #ffed00;
+        border-color: #e68b2c;
+      }
+      .xp-button:active {
+        background: #e3e3e3;
+        box-shadow: inset 0 0 2px #000;
+      }
+
+      .xp-button-green {
+        background: linear-gradient(to bottom, #8CCF6F 0%, #45A118 50%, #358212 100%);
+        color: white;
+        text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+        border: 1px solid #1C4D0A;
+      }
+      .xp-button-green:hover {
+        filter: brightness(1.1);
       }
     </style>
   <script type="importmap">
